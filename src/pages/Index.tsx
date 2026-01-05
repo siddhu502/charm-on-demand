@@ -6,14 +6,27 @@ import ContentSections from '@/components/ContentSections';
 import WhatsAppFloat from '@/components/WhatsAppFloat';
 import ScrollToTop from '@/components/ScrollToTop';
 import { GraduationCap, BookOpen, Award, Users } from 'lucide-react';
-
-const stats = [
-  { icon: GraduationCap, value: "50,000+", label: "Students Helped", color: "bg-primary/10 text-primary" },
-  { icon: BookOpen, value: "1,000+", label: "Question Papers", color: "bg-accent/10 text-accent" },
-  { icon: Award, value: "21+", label: "Subjects Covered", color: "bg-success/10 text-success" },
-  { icon: Users, value: "500+", label: "Schools Trust Us", color: "bg-warning/10 text-warning" },
-];
-
+const stats = [{
+  icon: GraduationCap,
+  value: "50,000+",
+  label: "Students Helped",
+  color: "bg-primary/10 text-primary"
+}, {
+  icon: BookOpen,
+  value: "1,000+",
+  label: "Question Papers",
+  color: "bg-accent/10 text-accent"
+}, {
+  icon: Award,
+  value: "21+",
+  label: "Subjects Covered",
+  color: "bg-success/10 text-success"
+}, {
+  icon: Users,
+  value: "500+",
+  label: "Schools Trust Us",
+  color: "bg-warning/10 text-warning"
+}];
 const Index = () => {
   useEffect(() => {
     // Trigger animations on mount
@@ -24,12 +37,9 @@ const Index = () => {
         }, 100 * index);
       });
     }, 100);
-
     return () => clearTimeout(timer);
   }, []);
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <Header />
       
       <main>
@@ -44,7 +54,7 @@ const Index = () => {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12 animate-fade-in-up">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-heading mb-4">
-                <span className="gradient-text">Smart Abhyas</span>
+                <span className="gradient-text">Smart Shikshan</span>
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
                 Your Complete Exam Preparation Partner
@@ -55,23 +65,13 @@ const Index = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-16 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-16 animate-fade-in-up" style={{
+            animationDelay: '200ms'
+          }}>
               {stats.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <div 
-                    key={stat.label} 
-                    className="stat-card text-center"
-                    style={{ animationDelay: `${(index + 1) * 100}ms` }}
-                  >
-                    <div className={`stat-icon mx-auto ${stat.color}`}>
-                      <Icon className="h-7 w-7" />
-                    </div>
-                    <div className="stat-value">{stat.value}</div>
-                    <div className="stat-label">{stat.label}</div>
-                  </div>
-                );
-              })}
+              const Icon = stat.icon;
+              return;
+            })}
             </div>
 
             {/* Main Form */}
@@ -90,8 +90,6 @@ const Index = () => {
       <Footer />
       <WhatsAppFloat />
       <ScrollToTop />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
