@@ -6,34 +6,69 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { ChevronDown } from "lucide-react";
 
-// Mock data - in a real app this would come from a database
+// Class options
 const standards = [
-  { id: "5", name: "इयत्ता ५वी" },
-  { id: "6", name: "इयत्ता ६वी" },
-  { id: "7", name: "इयत्ता ७वी" },
-  { id: "8", name: "इयत्ता ८वी" },
-  { id: "9", name: "इयत्ता ९वी" },
-  { id: "10", name: "इयत्ता १०वी" },
-  { id: "11-science", name: "इयत्ता ११वी (विज्ञान)" },
-  { id: "11-commerce", name: "इयत्ता ११वी (वाणिज्य)" },
-  { id: "11-arts", name: "इयत्ता ११वी (कला)" },
-  { id: "12-science", name: "इयत्ता १२वी (विज्ञान)" },
-  { id: "12-commerce", name: "इयत्ता १२वी (वाणिज्य)" },
-  { id: "12-arts", name: "इयत्ता १२वी (कला)" },
+  { id: "10", name: "दहावी" },
+  { id: "12", name: "बारावी" },
+  { id: "mht-cet", name: "MHT-CET" },
+  { id: "jee-neet", name: "JEE-NEET" },
 ];
 
-const examTypes = [
-  { id: "unit-test", name: "युनिट चाचणी" },
-  { id: "first-term", name: "प्रथम सत्र परीक्षा" },
-  { id: "prelim", name: "पूर्व परीक्षा" },
-  { id: "second-term", name: "द्वितीय सत्र परीक्षा" },
-  { id: "annual", name: "वार्षिक परीक्षा" },
-];
+// Subject options based on class selection
+const subjectsByClass: Record<string, { id: string; name: string }[]> = {
+  "10": [
+    { id: "marathi", name: "मराठी" },
+    { id: "hindi", name: "हिंदी" },
+    { id: "english", name: "इंग्रजी" },
+    { id: "history", name: "इतिहास" },
+    { id: "geography", name: "भूगोल" },
+    { id: "algebra", name: "बीजगणित" },
+    { id: "geometry", name: "भूमिती" },
+    { id: "science1", name: "विज्ञान भाग 1" },
+    { id: "science2", name: "विज्ञान भाग 2" },
+    { id: "mathematics", name: "Mathematics" },
+    { id: "geometry-eng", name: "Geometry" },
+    { id: "science1-eng", name: "Science 1" },
+    { id: "science2-eng", name: "Science 2" },
+  ],
+  "12": [
+    { id: "marathi", name: "मराठी" },
+    { id: "hindi", name: "हिंदी" },
+    { id: "english", name: "इंग्रजी" },
+    { id: "history", name: "इतिहास" },
+    { id: "geography", name: "भूगोल" },
+    { id: "political-science", name: "राज्यशास्त्र" },
+    { id: "sociology", name: "समाजशास्त्र" },
+    { id: "economics", name: "अर्थशास्त्र" },
+    { id: "cooperation", name: "सहकार" },
+    { id: "secretarial", name: "चिटणीस कार्यपद्धती" },
+    { id: "commerce-org", name: "वाणिज्य संघटन" },
+    { id: "account", name: "ACCOUNT" },
+    { id: "physics", name: "PHYSICS" },
+    { id: "chemistry", name: "CHEMISTRY" },
+    { id: "biology", name: "BIOLOGY" },
+    { id: "maths", name: "MATHS" },
+  ],
+  "mht-cet": [
+    { id: "physics", name: "Physics" },
+    { id: "chemistry", name: "Chemistry" },
+    { id: "biology", name: "Biology" },
+    { id: "maths", name: "Maths" },
+  ],
+  "jee-neet": [
+    { id: "physics", name: "Physics" },
+    { id: "chemistry", name: "Chemistry" },
+    { id: "biology", name: "Biology" },
+  ],
+};
 
 const MainForm = () => {
   const [paperType, setPaperType] = useState<"question" | "answer">("question");
   const [selectedStandard, setSelectedStandard] = useState("");
-  const [selectedExamType, setSelectedExamType] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState("");
+
+  // Get subjects based on selected class
+  const availableSubjects = selectedStandard ? subjectsByClass[selectedStandard] || [] : [];
   const [schoolName, setSchoolName] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -47,8 +82,8 @@ const MainForm = () => {
       toast({ title: "कृपया इयत्ता निवडा", variant: "destructive" });
       return;
     }
-    if (!selectedExamType) {
-      toast({ title: "कृपया परीक्षा निवडा", variant: "destructive" });
+    if (!selectedSubject) {
+      toast({ title: "कृपया विषय निवडा", variant: "destructive" });
       return;
     }
     if (schoolName.length < 10) {
@@ -115,7 +150,10 @@ const MainForm = () => {
             <div className="relative">
               <select
                 value={selectedStandard}
-                onChange={(e) => setSelectedStandard(e.target.value)}
+                onChange={(e) => {
+                  setSelectedStandard(e.target.value);
+                  setSelectedSubject(""); // Reset subject when class changes
+                }}
                 className="w-full h-14 px-4 pr-10 rounded-lg border border-border bg-background text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">इयत्ता निवडा</option>
@@ -129,19 +167,20 @@ const MainForm = () => {
             </div>
           </div>
 
-          {/* Exam Type Selection Dropdown */}
+          {/* Subject Selection Dropdown */}
           <div className="space-y-2">
-            <Label className="text-base font-medium text-foreground">परीक्षा निवडा</Label>
+            <Label className="text-base font-medium text-foreground">विषय</Label>
             <div className="relative">
               <select
-                value={selectedExamType}
-                onChange={(e) => setSelectedExamType(e.target.value)}
-                className="w-full h-14 px-4 pr-10 rounded-lg border border-border bg-muted text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                disabled={!selectedStandard}
+                className="w-full h-14 px-4 pr-10 rounded-lg border border-border bg-background text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">परीक्षा निवडा</option>
-                {examTypes.map((exam) => (
-                  <option key={exam.id} value={exam.id}>
-                    {exam.name}
+                <option value="">विषय निवडा</option>
+                {availableSubjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
                   </option>
                 ))}
               </select>

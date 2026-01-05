@@ -69,9 +69,15 @@ const Index = () => {
             animationDelay: '200ms'
           }}>
               {stats.map((stat, index) => {
-              const Icon = stat.icon;
-              return;
-            })}
+                const Icon = stat.icon;
+                return (
+                  <div key={index} className="bg-card/50 backdrop-blur-sm rounded-xl p-4 md:p-6 text-center border border-border/50">
+                    <Icon className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <div className="text-2xl md:text-3xl font-bold text-foreground">{stat.value}</div>
+                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Main Form */}
