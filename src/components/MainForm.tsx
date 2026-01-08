@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { ChevronDown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { downloadActualPDF } from "@/lib/pdfUtils";
 
 // Class options
 const standards = [
@@ -62,12 +65,23 @@ const subjectsByClass: Record<string, { id: string; name: string }[]> = {
   ],
 };
 
+interface Chapter {
+  id: string;
+  title: string;
+  standard: string;
+  subject: string;
+  paper_type: string;
+  price: number;
+  file_url: string | null;
+}
+
 const MainForm = () => {
   const [paperType, setPaperType] = useState<"question" | "answer">("question");
   const [selectedStandard, setSelectedStandard] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [availableChapters, setAvailableChapters] = useState<Chapter[]>([]);
+  const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
 
-  // Get subjects based on selected class
   const availableSubjects = selectedStandard ? subjectsByClass[selectedStandard] || [] : [];
   const [schoolName, setSchoolName] = useState("");
   const [name, setName] = useState("");
@@ -75,15 +89,64 @@ const MainForm = () => {
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Fetch chapters when standard, subjects, or paper type changes
+  useEffect(() => {
+    if (selectedStandard && selectedSubjects.length > 0) {
+      fetchChapters();
+    } else {
+      setAvailableChapters([]);
+      setSelectedChapters([]);
+    }
+  }, [selectedStandard, selectedSubjects, paperType]);
+
+  const fetchChapters = async () => {
+    const { data, error } = await supabase
+      .from("chapters")
+      .select("*")
+      .eq("standard", selectedStandard)
+      .eq("paper_type", paperType)
+      .in("subject", selectedSubjects);
+
+    if (error) {
+      console.error("Error fetching chapters:", error);
+    } else {
+      setAvailableChapters(data || []);
+    }
+  };
+
+  const handleSubjectToggle = (subjectId: string) => {
+    setSelectedSubjects((prev) =>
+      prev.includes(subjectId)
+        ? prev.filter((id) => id !== subjectId)
+        : [...prev, subjectId]
+    );
+  };
+
+  const handleChapterToggle = (chapterId: string) => {
+    setSelectedChapters((prev) =>
+      prev.includes(chapterId)
+        ? prev.filter((id) => id !== chapterId)
+        : [...prev, chapterId]
+    );
+  };
+
+  const handleSelectAllSubjects = () => {
+    if (selectedSubjects.length === availableSubjects.length) {
+      setSelectedSubjects([]);
+    } else {
+      setSelectedSubjects(availableSubjects.map((s) => s.id));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedStandard) {
       toast({ title: "कृपया इयत्ता निवडा", variant: "destructive" });
       return;
     }
-    if (!selectedSubject) {
-      toast({ title: "कृपया विषय निवडा", variant: "destructive" });
+    if (selectedSubjects.length === 0) {
+      toast({ title: "कृपया किमान एक विषय निवडा", variant: "destructive" });
       return;
     }
     if (schoolName.length < 10) {
@@ -98,16 +161,58 @@ const MainForm = () => {
       toast({ title: "कृपया ई-मेल प्रविष्ट करा", variant: "destructive" });
       return;
     }
+    if (selectedChapters.length === 0) {
+      toast({ title: "कृपया किमान एक प्रकरण निवडा", variant: "destructive" });
+      return;
+    }
 
     setIsLoading(true);
 
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const userInfo = {
+        collegeName: schoolName,
+        email,
+        phone,
+      };
 
-    toast({
-      title: "Download सुरू!",
-      description: paperType === "question" ? "प्रश्नपत्रिका डाउनलोड होत आहे." : "उत्तरपत्रिका डाउनलोड होत आहे.",
-    });
+      // Download each selected chapter
+      for (const chapterId of selectedChapters) {
+        const chapter = availableChapters.find((c) => c.id === chapterId);
+        if (chapter && chapter.file_url) {
+          // Record download
+          await supabase.from("user_downloads").insert({
+            chapter_id: chapter.id,
+            college_name: schoolName,
+            email,
+            phone,
+          });
+
+          // Download with watermark
+          await downloadActualPDF(
+            {
+              file_url: chapter.file_url,
+              title: chapter.title,
+              standard: chapter.standard,
+              subject: chapter.subject,
+              paper_type: chapter.paper_type,
+            },
+            userInfo
+          );
+        }
+      }
+
+      toast({
+        title: "Download सुरू!",
+        description: `${selectedChapters.length} प्रश्नपत्रिका डाउनलोड झाल्या.`,
+      });
+    } catch (error) {
+      console.error("Download error:", error);
+      toast({
+        title: "Download अयशस्वी",
+        description: "कृपया पुन्हा प्रयत्न करा.",
+        variant: "destructive",
+      });
+    }
 
     setIsLoading(false);
   };
@@ -152,7 +257,8 @@ const MainForm = () => {
                 value={selectedStandard}
                 onChange={(e) => {
                   setSelectedStandard(e.target.value);
-                  setSelectedSubject(""); // Reset subject when class changes
+                  setSelectedSubjects([]);
+                  setSelectedChapters([]);
                 }}
                 className="w-full h-14 px-4 pr-10 rounded-lg border border-border bg-background text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
               >
@@ -167,26 +273,77 @@ const MainForm = () => {
             </div>
           </div>
 
-          {/* Subject Selection Dropdown */}
-          <div className="space-y-2">
-            <Label className="text-base font-medium text-foreground">विषय</Label>
-            <div className="relative">
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                disabled={!selectedStandard}
-                className="w-full h-14 px-4 pr-10 rounded-lg border border-border bg-background text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="">विषय निवडा</option>
+          {/* Subject Multi-Select Checkboxes */}
+          {selectedStandard && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium text-foreground">
+                  विषय निवडा ({selectedSubjects.length} निवडले)
+                </Label>
+                <button
+                  type="button"
+                  onClick={handleSelectAllSubjects}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {selectedSubjects.length === availableSubjects.length
+                    ? "सर्व काढा"
+                    : "सर्व निवडा"}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {availableSubjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
+                  <label
+                    key={subject.id}
+                    className={`subject-checkbox ${
+                      selectedSubjects.includes(subject.id) ? "selected" : ""
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selectedSubjects.includes(subject.id)}
+                      onCheckedChange={() => handleSubjectToggle(subject.id)}
+                    />
+                    <span className="subject-checkbox-content text-sm">
+                      {subject.name}
+                    </span>
+                  </label>
                 ))}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Available Chapters */}
+          {availableChapters.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium text-foreground">
+                उपलब्ध प्रकरणे ({selectedChapters.length}/{availableChapters.length} निवडले)
+              </Label>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {availableChapters.map((chapter) => (
+                  <label
+                    key={chapter.id}
+                    className={`subject-checkbox ${
+                      selectedChapters.includes(chapter.id) ? "selected" : ""
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selectedChapters.includes(chapter.id)}
+                      onCheckedChange={() => handleChapterToggle(chapter.id)}
+                    />
+                    <div className="flex-1">
+                      <span className="subject-checkbox-content text-sm font-medium">
+                        {chapter.title}
+                      </span>
+                      {chapter.price > 0 && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ₹{chapter.price}
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* School Name */}
           <div className="space-y-2">
@@ -206,7 +363,7 @@ const MainForm = () => {
           {/* Personal Information Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground">वैयक्तिक माहिती</h3>
-            
+
             {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-base font-medium text-foreground">
@@ -254,9 +411,9 @@ const MainForm = () => {
 
           {/* Submit Button */}
           <div className="flex justify-center pt-4">
-            <Button 
-              type="submit" 
-              size="lg" 
+            <Button
+              type="submit"
+              size="lg"
               className="h-14 px-16 text-lg font-bold rounded-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg"
               disabled={isLoading}
             >
