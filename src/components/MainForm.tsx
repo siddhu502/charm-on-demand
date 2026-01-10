@@ -9,6 +9,12 @@ import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadActualPDF } from "@/lib/pdfUtils";
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 // Class options
 const standards = [
   { id: "10", name: "दहावी" },
@@ -89,6 +95,17 @@ const MainForm = () => {
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   // Fetch chapters when standard, subjects, or paper type changes
   useEffect(() => {
     if (selectedStandard && selectedSubjects.length > 0) {
@@ -138,6 +155,112 @@ const MainForm = () => {
     }
   };
 
+  const calculateTotalPrice = () => {
+    return selectedChapters.reduce((total, chapterId) => {
+      const chapter = availableChapters.find((c) => c.id === chapterId);
+      return total + (chapter?.price || 0);
+    }, 0);
+  };
+
+  const downloadChapter = async (chapter: Chapter, userInfo: { collegeName: string; email: string; phone: string }) => {
+    if (chapter.file_url) {
+      // Record download
+      await supabase.from("user_downloads").insert({
+        chapter_id: chapter.id,
+        college_name: userInfo.collegeName,
+        email: userInfo.email,
+        phone: userInfo.phone,
+      });
+
+      // Download with watermark
+      await downloadActualPDF(
+        {
+          file_url: chapter.file_url,
+          title: chapter.title,
+          standard: chapter.standard,
+          subject: chapter.subject,
+          paper_type: chapter.paper_type,
+        },
+        userInfo
+      );
+    }
+  };
+
+  const handlePayment = async (chapter: Chapter, userInfo: { collegeName: string; email: string; phone: string }) => {
+    try {
+      // Create order
+      const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
+        body: {
+          amount: chapter.price,
+          chapterId: chapter.id,
+          userDetails: userInfo,
+        },
+      });
+
+      if (orderError || orderData?.error) {
+        throw new Error(orderData?.error || orderError?.message || 'Failed to create order');
+      }
+
+      return new Promise<boolean>((resolve) => {
+        const options = {
+          key: orderData.keyId,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: 'Smart Shikshan',
+          description: chapter.title,
+          order_id: orderData.orderId,
+          handler: async (response: any) => {
+            // Verify payment
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
+              body: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                chapterId: chapter.id,
+                userDetails: userInfo,
+              },
+            });
+
+            if (verifyError || verifyData?.error) {
+              toast({
+                title: 'Payment verification failed',
+                description: verifyData?.error || verifyError?.message,
+                variant: 'destructive',
+              });
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          },
+          prefill: {
+            name: name,
+            email: userInfo.email,
+            contact: userInfo.phone,
+          },
+          theme: {
+            color: '#7c3aed',
+          },
+          modal: {
+            ondismiss: () => {
+              resolve(false);
+            },
+          },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      });
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: 'Payment Error',
+        description: error.message || 'Failed to initiate payment',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -175,36 +298,33 @@ const MainForm = () => {
         phone,
       };
 
-      // Download each selected chapter
+      let successCount = 0;
+
+      // Process each selected chapter
       for (const chapterId of selectedChapters) {
         const chapter = availableChapters.find((c) => c.id === chapterId);
         if (chapter && chapter.file_url) {
-          // Record download
-          await supabase.from("user_downloads").insert({
-            chapter_id: chapter.id,
-            college_name: schoolName,
-            email,
-            phone,
-          });
-
-          // Download with watermark
-          await downloadActualPDF(
-            {
-              file_url: chapter.file_url,
-              title: chapter.title,
-              standard: chapter.standard,
-              subject: chapter.subject,
-              paper_type: chapter.paper_type,
-            },
-            userInfo
-          );
+          if (chapter.price > 0) {
+            // Paid chapter - process payment first
+            const paymentSuccess = await handlePayment(chapter, userInfo);
+            if (paymentSuccess) {
+              await downloadChapter(chapter, userInfo);
+              successCount++;
+            }
+          } else {
+            // Free chapter - download directly
+            await downloadChapter(chapter, userInfo);
+            successCount++;
+          }
         }
       }
 
-      toast({
-        title: "Download सुरू!",
-        description: `${selectedChapters.length} प्रश्नपत्रिका डाउनलोड झाल्या.`,
-      });
+      if (successCount > 0) {
+        toast({
+          title: "Download सुरू!",
+          description: `${successCount} प्रश्नपत्रिका डाउनलोड झाल्या.`,
+        });
+      }
     } catch (error) {
       console.error("Download error:", error);
       toast({
@@ -216,6 +336,8 @@ const MainForm = () => {
 
     setIsLoading(false);
   };
+
+  const totalPrice = calculateTotalPrice();
 
   return (
     <Card className="form-card max-w-2xl mx-auto animate-fade-in-up border-0 shadow-xl">
@@ -333,15 +455,26 @@ const MainForm = () => {
                       <span className="subject-checkbox-content text-sm font-medium">
                         {chapter.title}
                       </span>
-                      {chapter.price > 0 && (
-                        <span className="ml-2 text-xs text-muted-foreground">
+                      {chapter.price > 0 ? (
+                        <span className="ml-2 text-xs font-semibold text-primary">
                           ₹{chapter.price}
+                        </span>
+                      ) : (
+                        <span className="ml-2 text-xs text-green-600 font-semibold">
+                          Free
                         </span>
                       )}
                     </div>
                   </label>
                 ))}
               </div>
+              {totalPrice > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3 text-center">
+                  <span className="text-lg font-bold text-foreground">
+                    एकूण रक्कम: ₹{totalPrice}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -422,6 +555,8 @@ const MainForm = () => {
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Processing...
                 </span>
+              ) : totalPrice > 0 ? (
+                `₹${totalPrice} Pay & Download`
               ) : (
                 "Download करा"
               )}

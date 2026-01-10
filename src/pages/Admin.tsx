@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronDown, Upload, Trash2, Download, LogOut } from 'lucide-react';
+import { ChevronDown, Upload, Trash2, Download, LogOut, IndianRupee, Save } from 'lucide-react';
 import { downloadActualPDF } from '@/lib/pdfUtils';
 
 // Class options
@@ -93,6 +93,92 @@ interface UserDownload {
     file_url: string | null;
   } | null;
 }
+
+// Pricing Row Component for inline editing
+const PricingRow = ({ 
+  chapter, 
+  standards, 
+  subjectsByClass, 
+  onPriceUpdate 
+}: { 
+  chapter: Chapter; 
+  standards: { id: string; name: string }[];
+  subjectsByClass: Record<string, { id: string; name: string }[]>;
+  onPriceUpdate: () => void;
+}) => {
+  const [editPrice, setEditPrice] = useState(chapter.price.toString());
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [hasChanged, setHasChanged] = useState(false);
+
+  const handlePriceChange = (value: string) => {
+    setEditPrice(value);
+    setHasChanged(value !== chapter.price.toString());
+  };
+
+  const handleSavePrice = async () => {
+    const newPrice = parseFloat(editPrice);
+    if (isNaN(newPrice) || newPrice < 0) {
+      toast({
+        title: 'Invalid price',
+        description: 'Please enter a valid price',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    const { error } = await supabase
+      .from('chapters')
+      .update({ price: newPrice })
+      .eq('id', chapter.id);
+
+    if (error) {
+      toast({
+        title: 'Error updating price',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Price updated successfully!' });
+      setHasChanged(false);
+      onPriceUpdate();
+    }
+    setIsUpdating(false);
+  };
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{chapter.title}</TableCell>
+      <TableCell>{standards.find(s => s.id === chapter.standard)?.name || chapter.standard}</TableCell>
+      <TableCell>{subjectsByClass[chapter.standard]?.find(s => s.id === chapter.subject)?.name || chapter.subject}</TableCell>
+      <TableCell>{chapter.paper_type === 'question' ? 'प्रश्नपत्रिका' : 'उत्तरपत्रिका'}</TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          value={editPrice}
+          onChange={(e) => handlePriceChange(e.target.value)}
+          min="0"
+          step="1"
+          className="w-24"
+        />
+      </TableCell>
+      <TableCell>
+        <Button
+          variant={hasChanged ? "default" : "outline"}
+          size="sm"
+          onClick={handleSavePrice}
+          disabled={isUpdating || !hasChanged}
+        >
+          {isUpdating ? (
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -300,8 +386,9 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="chapters" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="chapters">Chapters</TabsTrigger>
+            <TabsTrigger value="pricing">Pricing</TabsTrigger>
             <TabsTrigger value="downloads">User Downloads</TabsTrigger>
           </TabsList>
 
@@ -451,6 +538,49 @@ const Admin = () => {
                           </Button>
                         </TableCell>
                       </TableRow>
+                    ))}
+                    {chapters.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          No chapters added yet
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="pricing" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <IndianRupee className="h-5 w-5" />
+                  Manage Pricing ({chapters.length} chapters)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Standard</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Price (₹)</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {chapters.map((chapter) => (
+                      <PricingRow 
+                        key={chapter.id} 
+                        chapter={chapter} 
+                        standards={standards}
+                        subjectsByClass={subjectsByClass}
+                        onPriceUpdate={fetchChapters}
+                      />
                     ))}
                     {chapters.length === 0 && (
                       <TableRow>
