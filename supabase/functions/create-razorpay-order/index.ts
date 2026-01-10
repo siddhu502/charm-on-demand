@@ -46,7 +46,7 @@ serve(async (req) => {
       body: JSON.stringify({
         amount: Math.round(amount * 100), // Razorpay expects amount in paise
         currency: 'INR',
-        receipt: `chapter_${chapterId}_${Date.now()}`,
+        receipt: `ch_${Date.now()}`, // Keep under 40 chars
         notes: {
           chapter_id: chapterId,
           email: userDetails.email,
