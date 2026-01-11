@@ -209,28 +209,48 @@ const MainForm = () => {
           name: 'Smart Shikshan',
           description: chapter.title,
           order_id: orderData.orderId,
-          handler: async (response: any) => {
-            // Verify payment
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
-              body: {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                chapterId: chapter.id,
-                userDetails: userInfo,
-              },
-            });
+          handler: function(response: any) {
+            // Verify payment using a regular function and handle async inside
+            (async () => {
+              try {
+                console.log('Payment successful, verifying...', response);
+                
+                const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
+                  body: {
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
+                    chapterId: chapter.id,
+                    userDetails: userInfo,
+                  },
+                });
 
-            if (verifyError || verifyData?.error) {
-              toast({
-                title: 'Payment verification failed',
-                description: verifyData?.error || verifyError?.message,
-                variant: 'destructive',
-              });
-              resolve(false);
-            } else {
-              resolve(true);
-            }
+                console.log('Verification response:', { verifyData, verifyError });
+
+                if (verifyError || verifyData?.error) {
+                  toast({
+                    title: 'Payment verification failed',
+                    description: verifyData?.error || verifyError?.message || 'Unknown error',
+                    variant: 'destructive',
+                  });
+                  resolve(false);
+                } else {
+                  toast({
+                    title: 'Payment successful!',
+                    description: 'Your download will start shortly.',
+                  });
+                  resolve(true);
+                }
+              } catch (err: any) {
+                console.error('Error in payment handler:', err);
+                toast({
+                  title: 'Payment verification error',
+                  description: err.message || 'Please contact support',
+                  variant: 'destructive',
+                });
+                resolve(false);
+              }
+            })();
           },
           prefill: {
             name: name,
@@ -241,7 +261,7 @@ const MainForm = () => {
             color: '#7c3aed',
           },
           modal: {
-            ondismiss: () => {
+            ondismiss: function() {
               resolve(false);
             },
           },
