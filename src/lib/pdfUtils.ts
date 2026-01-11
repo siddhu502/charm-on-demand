@@ -164,17 +164,18 @@ export const downloadWithWatermark = async (
     for (const page of pages) {
       const { width, height } = page.getSize();
 
-      // Add header with title
-      if (containsDevanagari(title)) {
-        await addMarathiTextAsImage(page, title, width, height);
+      // Add header with title and college name
+      const headerText = `${userInfo.collegeName} - ${title}`;
+      if (containsDevanagari(headerText)) {
+        await addMarathiTextAsImage(page, headerText, width, height);
       } else {
         const font = await pdfDoc.embedFont('Helvetica-Bold');
-        let fontSize = 24;
-        while (font.widthOfTextAtSize(title, fontSize) > width * 0.8 && fontSize > 12) {
+        let fontSize = 20;
+        while (font.widthOfTextAtSize(headerText, fontSize) > width * 0.9 && fontSize > 10) {
           fontSize -= 2;
         }
-        page.drawText(title, {
-          x: (width - font.widthOfTextAtSize(title, fontSize)) / 2,
+        page.drawText(headerText, {
+          x: (width - font.widthOfTextAtSize(headerText, fontSize)) / 2,
           y: height - 35,
           size: fontSize,
           font,
