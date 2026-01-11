@@ -5,21 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { ChevronDown, Download, FileText, Search, Calendar } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadActualPDF } from "@/lib/pdfUtils";
-
-interface DownloadRecord {
-  id: string;
-  downloaded_at: string;
-  chapter: {
-    title: string;
-    standard: string;
-    subject: string;
-    paper_type: string;
-    file_url: string | null;
-  } | null;
-}
 
 declare global {
   interface Window {
@@ -106,57 +94,6 @@ const MainForm = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // My Downloads state
-  const [searchEmail, setSearchEmail] = useState("");
-  const [myDownloads, setMyDownloads] = useState<DownloadRecord[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-
-  const searchDownloads = async () => {
-    if (!searchEmail) {
-      toast({ title: "कृपया ई-मेल प्रविष्ट करा", variant: "destructive" });
-      return;
-    }
-    
-    setIsSearching(true);
-    setHasSearched(true);
-    
-    const { data, error } = await supabase
-      .from("user_downloads")
-      .select(`
-        id,
-        downloaded_at,
-        chapter:chapters(title, standard, subject, paper_type, file_url)
-      `)
-      .eq("email", searchEmail)
-      .order("downloaded_at", { ascending: false });
-    
-    if (error) {
-      console.error("Error fetching downloads:", error);
-      toast({ title: "डाउनलोड शोधताना त्रुटी", variant: "destructive" });
-    } else {
-      setMyDownloads((data as unknown as DownloadRecord[]) || []);
-    }
-    
-    setIsSearching(false);
-  };
-
-  const redownloadChapter = async (download: DownloadRecord) => {
-    if (download.chapter?.file_url) {
-      await downloadActualPDF(
-        {
-          file_url: download.chapter.file_url,
-          title: download.chapter.title,
-          standard: download.chapter.standard,
-          subject: download.chapter.subject,
-          paper_type: download.chapter.paper_type,
-        },
-        { collegeName: schoolName || "User", email: searchEmail, phone: "" }
-      );
-      toast({ title: "डाउनलोड सुरू झाले!" });
-    }
-  };
 
   // Load Razorpay script
   useEffect(() => {
@@ -516,136 +453,7 @@ const MainForm = () => {
             </div>
           )}
 
-          {/* Available Chapters - Now After Subject Selection */}
-          {availableChapters.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-base font-medium text-foreground">
-                उपलब्ध प्रकरणे ({selectedChapters.length}/{availableChapters.length} निवडले)
-              </Label>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {availableChapters.map((chapter) => (
-                  <label
-                    key={chapter.id}
-                    className={`subject-checkbox ${
-                      selectedChapters.includes(chapter.id) ? "selected" : ""
-                    }`}
-                  >
-                    <Checkbox
-                      checked={selectedChapters.includes(chapter.id)}
-                      onCheckedChange={() => handleChapterToggle(chapter.id)}
-                    />
-                    <div className="flex-1">
-                      <span className="subject-checkbox-content text-sm font-medium">
-                        {chapter.title}
-                      </span>
-                      {chapter.price > 0 ? (
-                        <span className="ml-2 text-xs font-semibold text-primary">
-                          ₹{chapter.price}
-                        </span>
-                      ) : (
-                        <span className="ml-2 text-xs text-green-600 font-semibold">
-                          Free
-                        </span>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
-              {totalPrice > 0 && (
-                <div className="bg-muted/50 rounded-lg p-3 text-center">
-                  <span className="text-lg font-bold text-foreground">
-                    एकूण रक्कम: ₹{totalPrice}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* My Downloads Section */}
-          <div className="space-y-4 border-t border-border pt-6">
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Download className="h-5 w-5 text-primary" />
-              माझे डाउनलोड
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              तुमच्या ई-मेलने डाउनलोड केलेल्या सर्व प्रश्नपत्रिका पहा
-            </p>
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                placeholder="ई-मेल प्रविष्ट करा"
-                className="h-12 rounded-lg border-border flex-1"
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), searchDownloads())}
-              />
-              <Button
-                type="button"
-                onClick={searchDownloads}
-                disabled={isSearching}
-                className="h-12 px-6"
-                variant="outline"
-              >
-                {isSearching ? (
-                  <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                ) : (
-                  <Search className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-            
-            {hasSearched && (
-              <div className="space-y-3">
-                {myDownloads.length > 0 ? (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {myDownloads.map((download) => (
-                      <div
-                        key={download.id}
-                        className="bg-muted/30 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <FileText className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">{download.chapter?.title || "Unknown"}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(download.downloaded_at).toLocaleDateString('mr-IN', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => redownloadChapter(download)}
-                          className="shrink-0"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          पुन्हा डाउनलोड
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 bg-muted/20 rounded-lg">
-                    <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-muted-foreground">या ई-मेलसाठी कोणतेही डाउनलोड सापडले नाहीत</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Separator */}
-          <div className="border-t border-border pt-6"></div>
-
-          {/* School Name */}
+          {/* School Name - Moved Up */}
           <div className="space-y-2">
             <Label htmlFor="schoolName" className="text-base font-medium text-foreground">
               विद्यालय / कॉलेज नाव
@@ -660,7 +468,7 @@ const MainForm = () => {
             <p className="text-sm text-muted-foreground">किमान 10 अक्षरे आवश्यक</p>
           </div>
 
-          {/* Personal Information Section */}
+          {/* Personal Information Section - Moved Up */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground">वैयक्तिक माहिती</h3>
 
@@ -708,6 +516,51 @@ const MainForm = () => {
               </div>
             </div>
           </div>
+
+          {/* Available Chapters - Now Below User Info */}
+          {availableChapters.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium text-foreground">
+                उपलब्ध प्रकरणे ({selectedChapters.length}/{availableChapters.length} निवडले)
+              </Label>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {availableChapters.map((chapter) => (
+                  <label
+                    key={chapter.id}
+                    className={`subject-checkbox ${
+                      selectedChapters.includes(chapter.id) ? "selected" : ""
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selectedChapters.includes(chapter.id)}
+                      onCheckedChange={() => handleChapterToggle(chapter.id)}
+                    />
+                    <div className="flex-1">
+                      <span className="subject-checkbox-content text-sm font-medium">
+                        {chapter.title}
+                      </span>
+                      {chapter.price > 0 ? (
+                        <span className="ml-2 text-xs font-semibold text-primary">
+                          ₹{chapter.price}
+                        </span>
+                      ) : (
+                        <span className="ml-2 text-xs text-green-600 font-semibold">
+                          Free
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+              {totalPrice > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3 text-center">
+                  <span className="text-lg font-bold text-foreground">
+                    एकूण रक्कम: ₹{totalPrice}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Submit Button */}
           <div className="flex justify-center pt-4">
