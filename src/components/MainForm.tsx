@@ -453,7 +453,52 @@ const MainForm = () => {
             </div>
           )}
 
-          {/* School Name - Moved Up */}
+          {/* Available Chapters - Before User Info */}
+          {availableChapters.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium text-foreground">
+                उपलब्ध प्रकरणे ({selectedChapters.length}/{availableChapters.length} निवडले)
+              </Label>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {availableChapters.map((chapter) => (
+                  <label
+                    key={chapter.id}
+                    className={`subject-checkbox ${
+                      selectedChapters.includes(chapter.id) ? "selected" : ""
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selectedChapters.includes(chapter.id)}
+                      onCheckedChange={() => handleChapterToggle(chapter.id)}
+                    />
+                    <div className="flex-1">
+                      <span className="subject-checkbox-content text-sm font-medium">
+                        {chapter.title}
+                      </span>
+                      {chapter.price > 0 ? (
+                        <span className="ml-2 text-xs font-semibold text-primary">
+                          ₹{chapter.price}
+                        </span>
+                      ) : (
+                        <span className="ml-2 text-xs text-green-600 font-semibold">
+                          Free
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+              {totalPrice > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3 text-center">
+                  <span className="text-lg font-bold text-foreground">
+                    एकूण रक्कम: ₹{totalPrice}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* School Name */}
           <div className="space-y-2">
             <Label htmlFor="schoolName" className="text-base font-medium text-foreground">
               विद्यालय / कॉलेज नाव
@@ -468,7 +513,7 @@ const MainForm = () => {
             <p className="text-sm text-muted-foreground">किमान 10 अक्षरे आवश्यक</p>
           </div>
 
-          {/* Personal Information Section - Moved Up */}
+          {/* Personal Information Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground">वैयक्तिक माहिती</h3>
 
@@ -516,51 +561,6 @@ const MainForm = () => {
               </div>
             </div>
           </div>
-
-          {/* Available Chapters - Now Below User Info */}
-          {availableChapters.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-base font-medium text-foreground">
-                उपलब्ध प्रकरणे ({selectedChapters.length}/{availableChapters.length} निवडले)
-              </Label>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {availableChapters.map((chapter) => (
-                  <label
-                    key={chapter.id}
-                    className={`subject-checkbox ${
-                      selectedChapters.includes(chapter.id) ? "selected" : ""
-                    }`}
-                  >
-                    <Checkbox
-                      checked={selectedChapters.includes(chapter.id)}
-                      onCheckedChange={() => handleChapterToggle(chapter.id)}
-                    />
-                    <div className="flex-1">
-                      <span className="subject-checkbox-content text-sm font-medium">
-                        {chapter.title}
-                      </span>
-                      {chapter.price > 0 ? (
-                        <span className="ml-2 text-xs font-semibold text-primary">
-                          ₹{chapter.price}
-                        </span>
-                      ) : (
-                        <span className="ml-2 text-xs text-green-600 font-semibold">
-                          Free
-                        </span>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
-              {totalPrice > 0 && (
-                <div className="bg-muted/50 rounded-lg p-3 text-center">
-                  <span className="text-lg font-bold text-foreground">
-                    एकूण रक्कम: ₹{totalPrice}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Submit Button */}
           <div className="flex justify-center pt-4">
