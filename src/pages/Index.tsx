@@ -65,32 +65,19 @@ const Index = () => {
             </div>
 
             {/* Stats */}
-            <div className="mb-16 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              {/* Main Stat - Students Helped */}
-              <div className="bg-card/50 backdrop-blur-sm rounded-xl p-6 md:p-8 text-center border border-border/50 mb-6">
-                <GraduationCap className="h-12 w-12 mx-auto mb-3 text-primary" />
-                <div className="text-4xl md:text-5xl font-bold text-foreground">50,000+</div>
-                <div className="text-lg text-muted-foreground">Students Helped</div>
-              </div>
-              
-              {/* Secondary Stats Grid */}
-              <div className="grid grid-cols-3 gap-4 md:gap-6">
-                <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 md:p-6 text-center border border-border/50">
-                  <BookOpen className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <div className="text-2xl md:text-3xl font-bold text-foreground">1,000+</div>
-                  <div className="text-sm text-muted-foreground">Question Papers</div>
-                </div>
-                <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 md:p-6 text-center border border-border/50">
-                  <Award className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <div className="text-2xl md:text-3xl font-bold text-foreground">21+</div>
-                  <div className="text-sm text-muted-foreground">Subjects Covered</div>
-                </div>
-                <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 md:p-6 text-center border border-border/50">
-                  <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <div className="text-2xl md:text-3xl font-bold text-foreground">500+</div>
-                  <div className="text-sm text-muted-foreground">Schools Trust Us</div>
-                </div>
-              </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-16 animate-fade-in-up" style={{
+            animationDelay: '200ms'
+          }}>
+              {stats.map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <div key={index} className="bg-card/50 backdrop-blur-sm rounded-xl p-4 md:p-6 text-center border border-border/50">
+                    <Icon className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <div className="text-2xl md:text-3xl font-bold text-foreground">{stat.value}</div>
+                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Main Form */}

@@ -453,7 +453,7 @@ const MainForm = () => {
             </div>
           )}
 
-          {/* Available Chapters - Before User Info */}
+          {/* Available Chapters */}
           {availableChapters.length > 0 && (
             <div className="space-y-3">
               <Label className="text-base font-medium text-foreground">
