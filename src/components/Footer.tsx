@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Facebook, Instagram, Youtube, Send } from "lucide-react";
+import { BookOpen, Facebook, Instagram, Youtube, Send, MessageCircle } from "lucide-react";
 
 const Footer = () => {
   const footerLinks = [
@@ -11,10 +11,11 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { name: "Facebook", icon: Facebook, href: "https://www.facebook.com/smartlyshikshan", hoverClass: "hover:bg-blue-600" },
-    { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/smartshikshan", hoverClass: "hover:bg-gradient-to-tr hover:from-yellow-400 hover:via-pink-500 hover:to-purple-600" },
     { name: "YouTube", icon: Youtube, href: "https://www.youtube.com/@smartlyshikshan", hoverClass: "hover:bg-red-600" },
+    { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/smartshikshan", hoverClass: "hover:bg-gradient-to-tr hover:from-yellow-400 hover:via-pink-500 hover:to-purple-600" },
+    { name: "Facebook", icon: Facebook, href: "https://www.facebook.com/smartlyshikshan", hoverClass: "hover:bg-blue-600" },
     { name: "Telegram", icon: Send, href: "https://t.me/smartshikshan", hoverClass: "hover:bg-sky-500" },
+    { name: "WhatsApp", icon: MessageCircle, href: "https://wa.me/9730100160", hoverClass: "hover:bg-green-500" },
   ];
 
   return (
