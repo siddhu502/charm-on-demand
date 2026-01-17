@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/browserClient';
 import { ChevronDown, Upload, Trash2, Download, LogOut, IndianRupee, Save } from 'lucide-react';
 import { downloadActualPDF } from '@/lib/pdfUtils';
 
